@@ -18,8 +18,9 @@ export default function Home() {
       }
       setUser(session.user)
 
-      const { data } = await supabase.from("menu").select("*")
-      setMenu(data)
+      const { data, error } = await supabase.from("menu").select("*")
+      if (error) console.error("Error fetching menu:", error)
+      setMenu(data || [])
     }
     init()
   }, [])
@@ -32,6 +33,22 @@ export default function Home() {
       }
       return [...prev, { ...item, qty: 1 }]
     })
+  }
+
+  function kurangiKeranjang(id) {
+    setKeranjang(prev => {
+      const ada = prev.find(k => k.id === id)
+      if (ada?.qty === 1) {
+        return prev.filter(k => k.id !== id)
+      }
+      return prev.map(k => k.id === id ? { ...k, qty: k.qty - 1 } : k)
+    })
+  }
+
+  function handleBayar() {
+    if (keranjang.length === 0) return
+    alert(`Pesanan berhasil dibayar! Total: Rp ${total.toLocaleString()}`)
+    setKeranjang([])
   }
 
   const total = keranjang.reduce((sum, k) => sum + k.harga * k.qty, 0)
@@ -48,30 +65,39 @@ export default function Home() {
       </div>
 
       <h2>Menu</h2>
-      {menu.map(item => (
-        <div key={item.id} style={{ border: "1px solid #333", borderRadius: "8px", padding: "16px", marginBottom: "12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <div>
-              <h3 style={{ margin: 0 }}>{item.nama}</h3>
-              <p style={{ margin: "4px 0", color: "#aaa" }}>{item.deskripsi}</p>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ margin: 0, fontWeight: "bold" }}>Rp {item.harga.toLocaleString()}</p>
-              <button onClick={() => tambahKeranjang(item)} style={{ marginTop: "8px" }}>
-                + Tambah
-              </button>
+      {menu.length === 0 ? (
+        <p>Belum ada menu yang tersedia.</p>
+      ) : (
+        menu.map(item => (
+          <div key={item.id} style={{ border: "1px solid #333", borderRadius: "8px", padding: "16px", marginBottom: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div>
+                <h3 style={{ margin: 0 }}>{item.nama}</h3>
+                <p style={{ margin: "4px 0", color: "#aaa" }}>{item.deskripsi}</p>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <p style={{ margin: 0, fontWeight: "bold" }}>Rp {item.harga.toLocaleString()}</p>
+                <button onClick={() => tambahKeranjang(item)} style={{ marginTop: "8px" }}>
+                  + Tambah
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
 
       {keranjang.length > 0 && (
         <div style={{ border: "1px solid #555", borderRadius: "8px", padding: "16px", marginTop: "20px" }}>
           <h2>Keranjang 🛒</h2>
           {keranjang.map(k => (
-            <div key={k.id} style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>{k.nama} x{k.qty}</span>
-              <span>Rp {(k.harga * k.qty).toLocaleString()}</span>
+            <div key={k.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", alignItems: "center" }}>
+              <span>{k.nama}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button onClick={() => kurangiKeranjang(k.id)} style={{ padding: "2px 8px" }}>-</button>
+                <span>{k.qty}</span>
+                <button onClick={() => tambahKeranjang(k)} style={{ padding: "2px 8px" }}>+</button>
+                <span style={{ minWidth: "80px", textAlign: "right" }}>Rp {(k.harga * k.qty).toLocaleString()}</span>
+              </div>
             </div>
           ))}
           <hr />
@@ -79,7 +105,7 @@ export default function Home() {
             <span>Total</span>
             <span>Rp {total.toLocaleString()}</span>
           </div>
-          <button style={{ width: "100%", marginTop: "12px", padding: "10px" }}>
+          <button onClick={handleBayar} style={{ width: "100%", marginTop: "12px", padding: "10px" }}>
             Bayar
           </button>
         </div>
